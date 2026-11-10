@@ -20,6 +20,14 @@ pub trait ToolRecovery: Send + Sync + 'static {
     ) -> embedded::HostFuture<'a, Option<nanocode_tools::ToolOutput>>;
 }
 
+pub trait ToolGate: Send + Sync + 'static {
+    fn hold<'a>(
+        &'a self,
+        name: &'a str,
+        context: nanocode_tools::ToolContext<'a>,
+    ) -> embedded::HostFuture<'a, Option<String>>;
+}
+
 pub use function_tool::{Failure, FunctionHandler, FunctionTool, MaybeSend, TypedHandler};
 mod pins;
 mod policy;
