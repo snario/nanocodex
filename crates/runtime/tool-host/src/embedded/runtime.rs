@@ -36,6 +36,7 @@ pub struct EmbeddedToolRuntime {
     callable_tool_names: Swap<HashSet<String>>,
     policies: Vec<Arc<dyn crate::CodeModeToolPolicy>>,
     recovery: Option<Arc<dyn crate::ToolRecovery>>,
+    gate: Option<Arc<dyn crate::ToolGate>>,
     brief: Arc<[String]>,
 }
 
@@ -69,6 +70,7 @@ impl EmbeddedToolRuntime {
             callable_tool_names: Swap::default(),
             policies: Vec::new(),
             recovery: None,
+            gate: None,
             brief: Arc::from([]),
         }
     }
@@ -87,6 +89,7 @@ impl EmbeddedToolRuntime {
         self.session_id.clone_from(&tools.embedded_session_id);
         self.policies = tools.code_mode_policies();
         self.recovery = tools.recovery();
+        self.gate = tools.gate();
         self.brief = Arc::clone(&tools.brief_code_tools);
         self.local
             .extend(tools.registered.iter().map(|registered| LocalTool {
@@ -485,6 +488,10 @@ impl EmbeddedToolRuntime {
 
     pub async fn recover_tool(&self, name: &str, context: ToolContext<'_>) -> Option<ToolOutput> {
         self.recovery.as_ref()?.recover(name, context).await
+    }
+
+    pub async fn hold(&self, name: &str, context: ToolContext<'_>) -> Option<String> {
+        self.gate.as_ref()?.hold(name, context).await
     }
 
     pub async fn recover_code(

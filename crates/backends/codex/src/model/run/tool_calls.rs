@@ -1070,7 +1070,21 @@ impl ModelRun {
         recover: bool,
     ) -> Result<CompletedToolCall> {
         let qualified_name = qualified_tool_name(&call);
-        if let Some(message) = unsupported_tool_message(tools, &call) {
+        let refused = match unsupported_tool_message(tools, &call) {
+            None if !recover && !matches!(call.kind, CodeCallKind::ToolSearch) => {
+                let context = ToolContext::new(
+                    model.as_str(),
+                    session_id,
+                    &call.call_id,
+                    &[],
+                    DEFAULT_TOOL_OUTPUT_TOKENS,
+                )
+                .with_turn_id(Some(turn_id));
+                tools.hold(&qualified_name, context).await
+            }
+            refused => refused,
+        };
+        if let Some(message) = refused {
             let output = ToolOutputBody::Text(message);
             let structured_result = output.structured_result();
             record_tool_span_terminal(tool_span, "failed", "ERROR", 0, &output);

@@ -224,6 +224,14 @@ impl Call {
         input: Value,
         invocation: &ClaudeToolInvocation,
     ) -> std::result::Result<ClaudeToolReply, String> {
+        let name = match &self {
+            Self::Exec => "exec",
+            Self::Wait => "wait",
+            Self::Function(name) => name,
+        };
+        if let Some(fact) = runtime.hold(name, tool_context(invocation)).await {
+            return tool_reply(ToolOutput::error(fact));
+        }
         let context = tool_context(invocation);
         let mut progress = Progress(invocation.progress.as_ref());
         let execution = match self {
